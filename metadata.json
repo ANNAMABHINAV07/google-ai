@@ -1,0 +1,6 @@
+{
+  "name": "FocusFlow",
+  "description": "An ultimate productivity companion featuring workspace management, focus tracking, mini-games for breaks, and Google Calendar integration.",
+  "requestFramePermissions": ["notifications"],
+  "majorCapabilities": []
+}

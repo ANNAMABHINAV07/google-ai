@@ -1,0 +1,103 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User specific settings and metadata",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "workspaces": { "type": "array", "items": { "type": "string" } },
+        "preferences": {
+          "type": "object",
+          "properties": {
+            "breakInterval": { "type": "number", "description": "Minutes between breaks" },
+            "workDuration": { "type": "number", "description": "Focus session length" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "FocusSession": {
+      "title": "Focus Session",
+      "description": "Record of a single focus session",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "workspaceId": { "type": "string" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "duration": { "type": "number", "description": "Duration in minutes" },
+        "taskDescription": { "type": "string" },
+        "status": { "type": "string", "enum": ["completed", "interrupted"] }
+      },
+      "required": ["userId", "startTime"]
+    },
+    "Goal": {
+      "title": "Goal",
+      "description": "User defined goal",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "estimatedMinutes": { "type": "number", "description": "Planned duration for the task" },
+        "deadline": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["pending", "in-progress", "completed"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title"]
+    },
+    "DailyReport": {
+      "title": "Daily Report",
+      "description": "AI generated daily focus summary",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "summary": { "type": "string" },
+        "totalFocusTime": { "type": "number" },
+        "goalsAccomplished": { "type": "number" },
+        "insights": { "type": "string" }
+      },
+      "required": ["userId", "date"]
+    },
+    "Workspace": {
+      "title": "Workspace",
+      "description": "A named workspace for organizing tasks",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "name"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Individual user profiles"
+    },
+    "/users/{userId}/sessions/{sessionId}": {
+      "schema": "FocusSession",
+      "description": "Focus history for a user"
+    },
+    "/users/{userId}/goals/{goalId}": {
+      "schema": "Goal",
+      "description": "User goals"
+    },
+    "/users/{userId}/reports/{reportId}": {
+      "schema": "DailyReport",
+      "description": "Daily reports for a user"
+    },
+    "/workspaces/{workspaceId}": {
+      "schema": "Workspace",
+      "description": "Global workspace definitions"
+    }
+  }
+}
