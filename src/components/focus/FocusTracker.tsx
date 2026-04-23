@@ -1,23 +1,51 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Play, Pause, RotateCcw, Coffee, Trophy } from 'lucide-react';
+import { Play, Pause, RotateCcw, Coffee, Trophy, Plus } from 'lucide-react';
 import { Progress } from '../ui/progress';
 
 interface FocusTrackerProps {
   onSessionComplete: (duration: number) => void;
+  onTimerStateChange?: (isActive: boolean) => void;
+  activeTask?: { title: string; duration: number } | null;
   workDuration?: number;
   breakDuration?: number;
 }
 
 export const FocusTracker: React.FC<FocusTrackerProps> = ({ 
   onSessionComplete, 
-  workDuration = 25, 
-  breakDuration = 5 
+  onTimerStateChange,
+  activeTask,
+  workDuration: propsWorkDuration = 25, 
+  breakDuration: propsBreakDuration = 5 
 }) => {
+  const [workDuration, setWorkDuration] = useState(propsWorkDuration);
+  const [breakDuration, setBreakDuration] = useState(propsBreakDuration);
   const [timeLeft, setTimeLeft] = useState(workDuration * 60);
   const [isActive, setIsActive] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Sync props and active task to local state when inactive
+  useEffect(() => {
+    if (!isActive) {
+      if (activeTask) {
+        setWorkDuration(activeTask.duration);
+        setIsActive(true); // Auto-start lock mode
+      } else {
+        setWorkDuration(propsWorkDuration);
+      }
+    }
+  }, [activeTask, propsWorkDuration]); // remove isActive as a dependency here to prevent infinite auto-start loops after pausing
+
+  useEffect(() => {
+    onTimerStateChange?.(isActive);
+  }, [isActive, onTimerStateChange]);
+
+  useEffect(() => {
+    if (!isActive) {
+      setTimeLeft(isBreak ? breakDuration * 60 : workDuration * 60);
+    }
+  }, [workDuration, breakDuration, isBreak, isActive]);
 
   useEffect(() => {
     if (isActive && timeLeft > 0) {
@@ -39,20 +67,26 @@ export const FocusTracker: React.FC<FocusTrackerProps> = ({
     if (!isBreak) {
       onSessionComplete(workDuration);
       setIsBreak(true);
-      setTimeLeft(breakDuration * 60);
-      alert("Work session complete! Time for a break.");
     } else {
       setIsBreak(false);
-      setTimeLeft(workDuration * 60);
-      alert("Break over! Let's get back to work.");
     }
     setIsActive(false);
+    alert(isBreak ? "Break over! Let's get back to work." : "Work session complete! Time for a break.");
   };
 
   const toggleTimer = () => setIsActive(!isActive);
   const resetTimer = () => {
     setIsActive(false);
     setTimeLeft(isBreak ? breakDuration * 60 : workDuration * 60);
+  };
+
+  const adjustDuration = (amount: number) => {
+    if (isActive) return;
+    if (isBreak) {
+      setBreakDuration(prev => Math.max(1, prev + amount));
+    } else {
+      setWorkDuration(prev => Math.max(1, prev + amount));
+    }
   };
 
   const minutes = Math.floor(timeLeft / 60);
@@ -100,12 +134,30 @@ export const FocusTracker: React.FC<FocusTrackerProps> = ({
           <motion.div 
             animate={{ opacity: [0.5, 1, 0.5] }}
             transition={{ duration: 2, repeat: Infinity }}
-            className="text-[10px] uppercase tracking-[0.3em] text-slate-400 mb-1 font-bold"
+            className={`text-[10px] uppercase tracking-[0.3em] mb-1 font-bold ${activeTask && !isBreak ? 'text-cyan-400' : 'text-slate-400'}`}
           >
-            {isBreak ? 'AETHER RECHARGE' : 'DEEP FOCUS SESSION'}
+            {isBreak ? 'AETHER RECHARGE' : (activeTask ? activeTask.title : 'DEEP FOCUS SESSION')}
           </motion.div>
-          <div className="text-7xl font-mono tracking-tighter text-white font-black tabular-nums">
-            {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+          <div className="flex items-center gap-6">
+            {!isActive && (
+              <button 
+                onClick={() => adjustDuration(-1)}
+                className="text-slate-600 hover:text-cyan-400 transition-colors p-2"
+              >
+                <div className="w-6 h-0.5 bg-current rounded-full"></div>
+              </button>
+            )}
+            <div className="text-7xl font-mono tracking-tighter text-white font-black tabular-nums">
+              {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+            </div>
+            {!isActive && (
+              <button 
+                onClick={() => adjustDuration(1)}
+                className="text-slate-600 hover:text-cyan-400 transition-colors p-2"
+              >
+                <Plus size={24} />
+              </button>
+            )}
           </div>
           
           <div className="mt-8 flex gap-4">

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db, handleFirestoreError } from '../../lib/firebase';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
-import { CheckCircle2, Circle, Trash2, Plus, Target, Clock, ChevronRight, Timer } from 'lucide-react';
+import { CheckCircle2, Circle, Trash2, Plus, Target, Clock, ChevronRight, Timer, Play } from 'lucide-react';
 
 interface Goal {
   id: string;
@@ -11,7 +11,12 @@ interface Goal {
   estimatedMinutes: number;
 }
 
-export const GoalsList: React.FC<{ userId: string }> = ({ userId }) => {
+interface GoalsListProps {
+  userId: string;
+  onStartTask?: (task: Goal) => void;
+}
+
+export const GoalsList: React.FC<GoalsListProps> = ({ userId, onStartTask }) => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [newGoal, setNewGoal] = useState('');
   const [newTime, setNewTime] = useState('25');
@@ -110,7 +115,7 @@ export const GoalsList: React.FC<{ userId: string }> = ({ userId }) => {
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+              className={`group flex items-center justify-between p-4 rounded-2xl border transition-all ${
                 goal.status === 'completed' 
                   ? 'bg-black/40 border-white/5 opacity-50' 
                   : 'bg-white/5 border-white/10 hover:border-white/20'
@@ -136,6 +141,15 @@ export const GoalsList: React.FC<{ userId: string }> = ({ userId }) => {
                 </div>
               </div>
               <div className="flex items-center gap-4">
+                 {onStartTask && goal.status !== 'completed' && (
+                   <button 
+                     onClick={() => onStartTask(goal)}
+                     className="p-2 text-cyan-400 bg-cyan-400/10 rounded-full hover:bg-cyan-400/20 transition-all opacity-0 group-hover:opacity-100"
+                     title="Start Task"
+                   >
+                     <Play size={14} className="ml-0.5" />
+                   </button>
+                 )}
                  <button 
                   onClick={() => deleteGoal(goal.id)}
                   className="opacity-0 group-hover:opacity-100 p-2 text-slate-700 hover:text-red-400 transition-all"

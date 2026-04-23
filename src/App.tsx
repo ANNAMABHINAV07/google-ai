@@ -20,6 +20,8 @@ export default function App() {
   const [activeTab, setActiveTab] = React.useState('focus');
   const [selectedWorkspace, setSelectedWorkspace] = React.useState<string | null>(null);
   const [totalFocusTimeToday, setTotalFocusTimeToday] = React.useState(0);
+  const [activeTask, setActiveTask] = React.useState<{ title: string; duration: number } | null>(null);
+  const [isFocusLocked, setIsFocusLocked] = React.useState(false);
 
   React.useEffect(() => {
     if (!user) return;
@@ -156,26 +158,31 @@ export default function App() {
         <div className="glow-3"></div>
       </div>
 
-      <WorkspaceManager 
-        userId={user.uid} 
-        onSelect={setSelectedWorkspace} 
-        selectedId={selectedWorkspace} 
-      />
+      <div className={isFocusLocked ? "pointer-events-none opacity-50 transition-all blur-[2px]" : "transition-all"}>
+        <WorkspaceManager 
+          userId={user.uid} 
+          onSelect={setSelectedWorkspace} 
+          selectedId={selectedWorkspace} 
+        />
+      </div>
       
       <div className="flex-1 flex flex-col relative z-10 overflow-hidden">
         {/* Top Header */}
         <header className="h-16 flex items-center justify-between px-8 z-20 border-b border-white/5 bg-black/20 backdrop-blur-md">
           <div className="flex items-center gap-8">
              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]"></div>
-                <span className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-400">FOCUSFLOW</span>
+                <div className={`w-3 h-3 rounded-full ${isFocusLocked ? 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]' : 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]'} transition-colors`}></div>
+                <span className={`text-sm font-semibold uppercase tracking-[0.2em] ${isFocusLocked ? 'text-purple-400' : 'text-cyan-400'}`}>
+                  {isFocusLocked ? 'AETHER LOCKED' : 'FOCUSFLOW'}
+                </span>
              </div>
              
-             <nav className="flex items-center gap-2 p-1 rounded-xl bg-white/5 border border-white/5">
+             <nav className={`flex items-center gap-2 p-1 rounded-xl bg-white/5 border border-white/5 transition-all ${isFocusLocked ? 'opacity-50 pointer-events-none' : ''}`}>
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => !isFocusLocked && setActiveTab(tab.id)}
+                    disabled={isFocusLocked}
                     className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${
                       activeTab === tab.id 
                         ? 'bg-white/10 text-white border border-white/10' 
@@ -192,7 +199,9 @@ export default function App() {
           <div className="flex items-center gap-4">
              <div className="hidden md:flex flex-col items-end mr-2">
                 <span className="text-xs font-bold uppercase tracking-tight text-slate-200">{user.displayName || 'Operator'}</span>
-                <span className="text-[10px] text-slate-500 font-mono">UPLINK ACTIVE</span>
+                <span className={`text-[10px] font-mono ${isFocusLocked ? 'text-purple-400' : 'text-slate-500'}`}>
+                  {isFocusLocked ? 'FOCUSED UPLINK' : 'UPLINK ACTIVE'}
+                </span>
              </div>
              {user.photoURL ? (
                 <img src={user.photoURL} alt="profile" className="w-8 h-8 rounded-full border border-white/20 hover:border-cyan-500 transition-colors cursor-pointer" />
@@ -219,9 +228,22 @@ export default function App() {
                 <div className="lg:col-span-8 flex flex-col gap-6">
                   {activeTab === 'focus' && (
                     <div className="flex flex-col gap-6">
-                      <FocusTracker onSessionComplete={handleSessionComplete} />
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <GoalsList userId={user.uid} />
+                      <FocusTracker 
+                        onSessionComplete={(duration) => {
+                          handleSessionComplete(duration);
+                          setActiveTask(null);
+                        }} 
+                        activeTask={activeTask}
+                        onTimerStateChange={setIsFocusLocked}
+                      />
+                      <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 transition-all ${isFocusLocked ? 'opacity-30 pointer-events-none blur-sm' : ''}`}>
+                        <GoalsList 
+                          userId={user.uid} 
+                          onStartTask={(task) => {
+                            setActiveTask({ title: task.title, duration: task.estimatedMinutes });
+                            setActiveTab('focus');
+                          }}
+                        />
                         {accessToken ? <CalendarAgenda accessToken={accessToken} /> : (
                            <div className="glass-panel p-8 flex flex-col items-center justify-center text-center opacity-40">
                               <Calendar className="text-slate-600 mb-4" size={32} />
@@ -232,7 +254,15 @@ export default function App() {
                     </div>
                   )}
 
-                  {activeTab === 'tasks' && <GoalsList userId={user.uid} />}
+                  {activeTab === 'tasks' && (
+                    <GoalsList 
+                      userId={user.uid} 
+                      onStartTask={(task) => {
+                        setActiveTask({ title: task.title, duration: task.estimatedMinutes });
+                        setActiveTab('focus');
+                      }}
+                    />
+                  )}
                   {activeTab === 'schedule' && accessToken && <CalendarAgenda accessToken={accessToken} />}
                   {activeTab === 'reports' && <DailyReport userId={user.uid} />}
                   {activeTab === 'games' && <SnakeGame />}
